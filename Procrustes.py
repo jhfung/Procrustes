@@ -125,13 +125,21 @@ class GPA:
 
         return self
 
-    def transform(self, X):
-        X_hat = self.c[:, np.newaxis, :] + self.s[:, np.newaxis, np.newaxis] * X @ self.q
+    def transform(self, X, fix_first=False):
+        if fix_first:
+            q1_inv = np.linalg.pinv(self.q[0,:,:])
+            c = ((self.c - self.c[0,:]) / self.s[0]) @ q1_inv
+            s = self.s / self.s[0]
+            q = self.q @ q1_inv
+            X_hat = c[:, np.newaxis, :] + s[:, np.newaxis, np.newaxis] * X @ q
+        else:
+            X_hat = self.c[:, np.newaxis, :] + self.s[:, np.newaxis, np.newaxis] * X @ self.q
+
         return X_hat
     
-    def fit_transform(self, X):
+    def fit_transform(self, X, fix_first=False):
         _ = self.fit(X)
-        X_hat = self.transform(X)
+        X_hat = self.transform(X, fix_first=fix_first)
         return X_hat
 
     def _compute_loss(self, X, c, q, s, Z):
