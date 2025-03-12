@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.utils import check_array
 from scipy.spatial.distance import cdist
 
 def weiszfeld(X, tol=1e-10, max_iter=200):
@@ -44,9 +45,9 @@ def modified_weiszfeld(X, tol=1e-10, max_iter=200):
 
     return y
 
-class GPA:
+class GeneralizedProcrustesAlign:
     """
-    A class implementing alternating minimization to solve the generalized Procrustes problem.  The main method is `.fit()`, which takes in a (number of samples) x (number of points) x (dimension) array.  After fitting, the optimal transformations can be found in `.c`, `.s`, and `.q`, and the centroid is stored in `.Z`.  If the individual aligned samples are desired, call `.fit_transform()` instead.  For the geometric median, initialize with `p=1`.  
+    A class implementing alternating minimization to solve the generalized Procrustes problem.  The main method is `.fit()`, which takes in a (number of samples) x (number of points) x (dimension) array, possibly with missing values.  After fitting, the optimal transformations can be found in `.c`, `.s`, and `.q`, and the centroid is stored in `.Z`.  If the individual aligned samples are desired, call `.fit_transform()` instead.  For the geometric median, initialize with `p=1`.  
     """
 
     def __init__(self, tol=1e-10, max_iter=200, p=2, centering=True, scaling=False, verbose=False):
@@ -59,6 +60,12 @@ class GPA:
 
     def fit(self, X):
         self.success = False
+        X = check_array(X, force_all_finite='allow-nan', allow_nd=True)
+
+        n_orig = X.shape[1]
+        non_na_ix = np.where(~np.all(np.isnan(X), axis=(0,2)))[0]
+        X = X[:, non_na_ix, :]
+
         k, n, d = X.shape
         mX = np.nan_to_num(X, nan=0)
         m = (~np.any(np.isnan(X), axis=2)).astype(int)
@@ -121,7 +128,8 @@ class GPA:
         self.c = c
         self.q = q
         self.s = s
-        self.Z = Z
+        self.Z = np.full((n_orig, d), np.nan)
+        self.Z[non_na_ix, :] = Z
 
         return self
 
